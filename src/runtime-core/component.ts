@@ -1,7 +1,8 @@
-export function createComponentInstance(vnode){
+export function createComponentInstance(vnode) {
   const component = {
     vnode,
-    type: vnode.type
-  }
-  return component
+    type: vnode.type,
+    setupState: {},
+  };
+  return component;
 }
