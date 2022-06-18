@@ -22,7 +22,7 @@ export const App = {
       //   h("p", { class: "p" }, "p"), h("p", { class: "p2" }, "p2")
       // ]
       // props
-      [h("p", { class: "p" }, "p"), h(Foo), { count: 1 }]
+      [h("p", { class: "p" }, "p"), h(Foo, {count:1})]
     );
   },
   setup() {

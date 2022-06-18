@@ -1,13 +1,11 @@
 import { ShapeFlags } from "../shared/ShapeFlags";
-import { createComponentInstance } from "./component";
-import { setupComponent } from "./createApp";
+import { createComponentInstance, setupComponent } from "./component";
 
 export function render(vnode, container) {
   patch(vnode, container);
 }
 
 function patch(vnode: any, container: any) {
-  // if (typeof vnode.type === "string") {
   const { shapeFlag } = vnode;
   if (shapeFlag & ShapeFlags.ELEMENT) {
     processElement(vnode, container);
@@ -37,7 +35,6 @@ function processElement(vnode: any, container: any) {
 }
 function mountElement(vnode: any, container: any) {
   const { type, props, children, shapeFlag } = vnode;
-  console.log(children);
   const el = (vnode.el = document.createElement(type));
   for (const key in props) {
     let val = props[key];
