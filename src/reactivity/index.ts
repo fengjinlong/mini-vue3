@@ -1,3 +1,1 @@
-export function fun (){
-  return 2
-}
+export {ref,proxyRefs} from "./ref"
