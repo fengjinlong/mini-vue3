@@ -1,11 +1,16 @@
 import { effect } from "../reactivity/effect";
+import { EMPTY_OBJ } from "../shared";
 import { ShapeFlags } from "../shared/ShapeFlags";
 import { createComponentInstance, setupComponent } from "./component";
 import { createAppAPI } from "./createApp";
 import { Fragment, Text } from "./vnode";
 
 export function createRenderer(options) {
-  const { createElement, patchProp, insert } = options;
+  const {
+    createElement: hostCreateElement,
+    patchProp: hostPatchProp,
+    insert: hostInsert,
+  } = options;
   function render(vnode, container) {
     patch(null, vnode, container, null);
   }
@@ -66,13 +71,35 @@ export function createRenderer(options) {
   function patchElement(n1: any, n2: any, container: any) {
     console.log(n1);
     console.log(n2);
+
     // props
+    const oldProps = n1.props || EMPTY_OBJ;
+    const newProps = n2.props || EMPTY_OBJ;
+    const el = (n2.el = n1.el);
+    patchProps(el, oldProps, newProps);
     // children
+  }
+  function patchProps(el, oldProps, newProps) {
+    if (oldProps === newProps) return;
+    for (const key in newProps) {
+      const prevProp = oldProps[key];
+      const nextProp = newProps[key];
+      if (prevProp !== nextProp) {
+        hostPatchProp(el, key, prevProp, nextProp);
+      }
+    }
+    if (oldProps !== EMPTY_OBJ) {
+      for (const key in oldProps) {
+        if (!(key in newProps)) {
+          hostPatchProp(el, key, oldProps[key], null);
+        }
+      }
+    }
   }
   function mountElement(vnode: any, container: any, parentComponent) {
     const { type, props, children, shapeFlag } = vnode;
     // const el = (vnode.el = document.createElement(type));
-    const el = (vnode.el = createElement(type));
+    const el = (vnode.el = hostCreateElement(type));
     for (const key in props) {
       let val = props[key];
       // const isOn = (key: string) => /^on[A-Z]/.test(key);
@@ -82,7 +109,7 @@ export function createRenderer(options) {
       // } else {
       //   el.setAttribute(key, val);
       // }
-      patchProp(el, key, val);
+      hostPatchProp(el, key, null, val);
     }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       el.textContent = children;
@@ -90,7 +117,7 @@ export function createRenderer(options) {
       mountChildren(vnode, el, parentComponent);
     }
     // container.append(el);
-    insert(el, container);
+    hostInsert(el, container);
   }
 
   function mountChildren(vnode, container, parentComponent) {
