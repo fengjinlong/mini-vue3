@@ -13,12 +13,14 @@ export function createRenderer(options) {
     remove: hostRemove,
     setElementText: hostSetElementText,
   } = options;
-  function render(vnode, container) {
-    patch(null, vnode, container, null, null);
+  function render(vnode, container, parentComponent) {
+    patch(null, vnode, container, parentComponent, null);
   }
+  function patch(n1, n2, container: any, parentComponent, anchor) {
+    // 当vnode.type的值时，组件是object，element是string，这样区分组件和元素
 
-  function patch(n1, n2: any, container: any, parentComponent, anchor) {
     const { type, shapeFlag } = n2;
+
     switch (type) {
       case Fragment:
         processFragment(n1, n2, container, parentComponent, anchor);
@@ -27,14 +29,18 @@ export function createRenderer(options) {
         processText(n1, n2, container);
         break;
       default:
+        // if (typeof vnode.type === "string") {
         if (shapeFlag & ShapeFlags.ELEMENT) {
+          // patch element
           processElement(n1, n2, container, parentComponent, anchor);
+          // } else if (isObject(vnode.type)) {
         } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+          // patch 组件
           processComponent(n1, n2, container, parentComponent, anchor);
         }
-        break;
     }
   }
+
   function processComponent(
     n1,
     n2: any,
@@ -82,45 +88,42 @@ export function createRenderer(options) {
     anchor
   ) {
     if (!n1) {
+      // 包含初始化和更新流程
+      // init
       mountElement(n2, container, parentComponent, anchor);
     } else {
+      console.warn("update element");
+      // 更新
       patchElement(n1, n2, container, parentComponent, anchor);
     }
   }
-  function patchElement(
-    n1: any,
-    n2: any,
-    container: any,
-    parentComponent,
-    anchor
-  ) {
-    // props
-    const oldProps = n1.props || EMPTY_OBJ;
-    const newProps = n2.props || EMPTY_OBJ;
+  function patchElement(n1, n2: any, container: any, parentComponent, anchor) {
+    const oldProps = n1.props;
+    const nextProps = n2.props;
     const el = (n2.el = n1.el);
-    patchProps(el, oldProps, newProps);
-    // children
+    // 更新属性
+    patchProps(el, oldProps, nextProps);
+    // 更新children
     patchChildren(n1, n2, el, parentComponent, anchor);
   }
-  function patchChildren(
-    n1: any,
-    n2: any,
-    container: any,
-    parentComponent,
-    anchor
-  ) {
+
+  function patchChildren(n1: any, n2, container, parentComponent, anchor) {
     const prevShapeFlag = n1.shapeFlag;
     const { shapeFlag } = n2;
-    const c2 = n2.children;
     const c1 = n1.children;
+    const c2 = n2.children;
+
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 把老的children 清空
         unmountChildren(n1.children);
+        // 设置 text
       }
       if (c1 !== c2) {
         hostSetElementText(container, c2);
       }
     } else {
+      // new array
       if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
         hostSetElementText(container, "");
         mountChildren(c2, container, parentComponent, anchor);
@@ -130,6 +133,7 @@ export function createRenderer(options) {
       }
     }
   }
+
   function patchKeyedChildren(
     c1,
     c2,
@@ -138,27 +142,35 @@ export function createRenderer(options) {
     parentAnchor
   ) {
     let i = 0;
+    // let l2 = c2.length - 1;
     let e1 = c1.length - 1;
     let e2 = c2.length - 1;
-    let l2 = c2.length;
-    function isSameVNode(n1, n2) {
+    function isSameVNodeType(n1, n2) {
       return n1.type === n2.type && n1.key === n2.key;
     }
+    // 只处理左侧
     while (i <= e1 && i <= e2) {
       const n1 = c1[i];
       const n2 = c2[i];
-      if (isSameVNode(n1, n2)) {
+      if (isSameVNodeType(n1, n2)) {
         patch(n1, n2, container, parentComponent, parentAnchor);
       } else {
         break;
       }
       i++;
     }
-    // 右移
+    // console.log(i);
+
+    /**
+     * 2 右侧相同
+     * a bc, de bc
+     *
+     */
+    // 只处理右侧
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1];
       const n2 = c2[e2];
-      if (isSameVNode(n1, n2)) {
+      if (isSameVNodeType(n1, n2)) {
         patch(n1, n2, container, parentComponent, parentAnchor);
       } else {
         break;
@@ -166,28 +178,22 @@ export function createRenderer(options) {
       e1--;
       e2--;
     }
-    // 新的比老的多11
+
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1;
-        const anchor = nextPos < l2 ? c2[nextPos].el : null;
-        console.log(anchor);
+        let anchor = nextPos < c2.length ? c2[nextPos].el : null;
         while (i <= e2) {
           patch(null, c2[i], container, parentComponent, anchor);
           i++;
         }
       }
     } else if (i > e2) {
-      while (i <= e1) {
-        hostRemove(c1[i].el);
-        i++;
-      }
-
-      // 老的比新的长
+    } else {
     }
   }
 
-  function unmountChildren(children: any) {
+  function unmountChildren(children) {
     for (let i = 0; i < children.length; i++) {
       const el = children[i].el;
       hostRemove(el);
@@ -211,19 +217,13 @@ export function createRenderer(options) {
       }
     }
   }
+
   function mountElement(vnode: any, container: any, parentComponent, anchor) {
     const { type, props, children, shapeFlag } = vnode;
     // const el = (vnode.el = document.createElement(type));
     const el = (vnode.el = hostCreateElement(type));
     for (const key in props) {
       let val = props[key];
-      // const isOn = (key: string) => /^on[A-Z]/.test(key);
-      // if (isOn(key)) {
-      //   const event = key.slice(2).toLowerCase();
-      //   el.addEventListener(event, val);
-      // } else {
-      //   el.setAttribute(key, val);
-      // }
       hostPatchProp(el, key, null, val);
     }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -232,7 +232,7 @@ export function createRenderer(options) {
       mountChildren(vnode.children, el, parentComponent, anchor);
     }
     // container.append(el);
-    hostInsert(el, container);
+    hostInsert(el, container, anchor);
   }
 
   function mountChildren(children, container, parentComponent, anchor) {
