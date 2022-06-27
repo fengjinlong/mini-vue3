@@ -142,7 +142,7 @@ export function createRenderer(options) {
     parentAnchor
   ) {
     let i = 0;
-    // let l2 = c2.length - 1;
+    let l2 = c2.length - 1;
     let e1 = c1.length - 1;
     let e2 = c2.length - 1;
     function isSameVNodeType(n1, n2) {
@@ -232,12 +232,17 @@ export function createRenderer(options) {
           patched++;
         }
       }
-      // debugger
       const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap);
-      let j = increasingNewIndexSequence.length;
-      for (let i = toBePatched-1; i  >=0;i--) {
+      let j = increasingNewIndexSequence.length-1;
+      for (let i = toBePatched - 1; i >= 0; i--) {
+        const nextIndex = i + s2;
+        const nextChild = c2[nextIndex];
+        const anchor = nextIndex + 1 <= l2 ? c2[nextIndex + 1].el : null;
+        
+        debugger
         if (i !== increasingNewIndexSequence[j]) {
           console.log("move");
+          hostInsert(nextChild.el, container, anchor);
         } else {
           j--;
         }
