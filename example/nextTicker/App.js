@@ -8,6 +8,7 @@ export const App = {
         count.value = i;
       }
     }
+    
     return {
       count,
       onClick,
