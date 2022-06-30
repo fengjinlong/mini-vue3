@@ -14,4 +14,22 @@ describe("Parse", () => {
       });
     });
   });
+  describe("element", () => {
+    it("div", () => {
+      const ast = baseParse("<div></div>");
+      expect(ast.children[0]).toStrictEqual({
+        type: NodeTypes.ELEMENT,
+        tag: "div",
+      });
+    });
+  });
+  describe("text", () => {
+    it("text", () => {
+      const ast = baseParse("some text");
+      expect(ast.children[0]).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: "some text",
+      });
+    });
+  });
 });
